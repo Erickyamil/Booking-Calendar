@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendario de Reservas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,500&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#F6EEE4;
+    --paper:#FBF6EF;
+    --maroon-deep:#6B1832;
+    --maroon-mid:#8C2547;
+    --maroon-hi:#A32E52;
+    --ink:#2A1620;
+    --ink-soft:#6b5560;
+    --gold:#B98B4E;
+    --rose-soft:#EFD3D9;
+    --line: rgba(107,24,50,0.15);
+    --shadow: 0 30px 60px -20px rgba(42,22,32,0.35);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(circle at 15% 10%, rgba(169,58,92,0.10), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(185,139,78,0.12), transparent 45%),
+      var(--cream);
+    font-family:'Work Sans', sans-serif;
+    color:var(--ink);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:32px 16px;
+  }
+
+  .stage{
+    width:100%;
+    max-width:400px;
+  }
+
+  .brandbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:14px;
+    padding:0 6px;
+  }
+  .brand{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:15px;
+    letter-spacing:0.02em;
+    color:var(--maroon-deep);
+    display:flex;
+    align-items:center;
+    gap:7px;
+  }
+  .brand svg{width:16px;height:16px;flex:none;}
+  .live-ticker{
+    font-size:11px;
+    color:var(--ink-soft);
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-variant-numeric: tabular-nums;
+  }
+  .live-dot{
+    width:6px;height:6px;border-radius:50%;
+    background:#3fae63;
+    box-shadow:0 0 0 0 rgba(63,174,99,0.6);
+    animation:pulse 1.8s infinite;
+  }
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(63,174,99,0.45);}
+    70%{box-shadow:0 0 0 6px rgba(63,174,99,0);}
+    100%{box-shadow:0 0 0 0 rgba(63,174,99,0);}
+  }
+
+  .phone{
+    position:relative;
+    background:var(--paper);
+    border-radius:28px;
+    box-shadow:var(--shadow);
+    border:1px solid var(--line);
+    overflow:hidden;
+  }
+
+  /* subtle crack motif — nod to the source screenshots */
+  .crack-overlay{
+    position:absolute; inset:0;
+    pointer-events:none;
+    opacity:0.05;
+    mix-blend-mode:multiply;
+    z-index:2;
+  }
+
+  .progress{
+    display:flex;
+    gap:6px;
+    padding:22px 26px 0 26px;
+    position:relative;
+    z-index:3;
+  }
+  .progress span{
+    height:3px;
+    flex:1;
+    border-radius:3px;
+    background:var(--line);
+    overflow:hidden;
+  }
+  .progress span i{
+    display:block;
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg,var(--maroon-mid),var(--gold));
+    transition:width .5s ease;
+  }
+  .progress span.done i{width:100%;}
+  .progress span.active i{width:100%;}
+
+  .panel{
+    padding:26px;
+    position:relative;
+    z-index:3;
+  }
+
+  .step{
+    display:none;
+    animation:rise .45s cubic-bezier(.2,.8,.2,1);
+  }
+  .step.active{display:block;}
+  @keyframes rise{
+    from{opacity:0; transform:translateY(10px);}
+    to{opacity:1; transform:translateY(0);}
+  }
+
+  /* ---- Step 1: welcome ---- */
+  .heart-badge{
+    width:56px;height:56px;
+    border-radius:16px;
+    background:var(--rose-soft);
+    display:flex;align-items:center;justify-content:center;
+    margin:6px auto 20px auto;
+  }
+  .heart-badge svg{width:24px;height:24px;color:var(--maroon-deep);}
+
+  h1.headline{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:25px;
+    line-height:1.25;
+    text-align:center;
+    margin:0 0 12px 0;
+    color:var(--ink);
+  }
+  p.sub{
+    text-align:center;
+    font-size:14px;
+    line-height:1.55;
+    color:var(--ink-soft);
+    margin:0 0 26px 0;
+  }
+  p.sub b{color:var(--maroon-deep); font-weight:600;}
+
+  .queue-row{
+    display:flex;
+    justify-content:center;
+    margin-bottom:22px;
+  }
+  .queue-avatars{
+    display:flex;
+  }
+  .queue-avatars span{
+    width:28px;height:28px;
+    border-radius:50%;
+    background:var(--maroon-mid);
+    color:#fff;
+    font-size:11px;
+    font-weight:600;
+    display:flex;align-items:center;justify-content:center;
+    border:2px solid var(--paper);
+    margin-left:-8px;
+    font-family:'Work Sans',sans-serif;
+  }
+  .queue-avatars span:first-child{margin-left:0;}
+  .queue-note{
+    align-self:center;
+    margin-left:8px;
+    font-size:11px;
+    color:var(--ink-soft);
+  }
+
+  .btn-primary{
+    display:block;
+    width:100%;
+    padding:15px 18px;
+    border:none;
+    border-radius:14px;
+    background:linear-gradient(180deg, var(--maroon-mid), var(--maroon-deep));
+    color:#fff;
+    font-family:'Work Sans', sans-serif;
+    font-weight:600;
+    font-size:15px;
+    letter-spacing:0.01em;
+    cursor:pointer;
+    box-shadow:0 10px 24px -8px rgba(107,24,50,0.55);
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .btn-primary:hover{transform:translateY(-1px); box-shadow:0 14px 28px -8px rgba(107,24,50,0.6);}
+  .btn-primary:active{transform:translateY(0px) scale(0.99);}
+  .btn-primary:disabled{
+    background:#cfc2c8; box-shadow:none; cursor:not-allowed; transform:none;
+  }
+
+  .btn-ghost{
+    display:block;
+    width:100%;
+    padding:12px 18px;
+    margin-top:10px;
+    border:1px solid var(--line);
+    border-radius:14px;
+    background:transparent;
+    color:var(--maroon-deep);
+    font-family:'Work Sans', sans-serif;
+    font-weight:600;
+    font-size:13px;
+    cursor:pointer;
+  }
+
+  /* ---- Step 2: name select ---- */
+  h2.title{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:20px;
+    text-align:center;
+    margin:4px 0 4px 0;
+  }
+  p.subtitle{
+    text-align:center;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin:0 0 20px 0;
+  }
+  .name-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-bottom:22px;
+  }
+  .name-btn{
+    padding:15px 10px;
+    border-radius:13px;
+    border:1.5px solid var(--line);
+    background:var(--cream);
+    font-family:'Work Sans', sans-serif;
+    font-weight:600;
+    font-size:14px;
+    color:var(--ink);
+    cursor:pointer;
+    transition:all .15s ease;
+  }
+  .name-btn:hover{border-color:var(--maroon-mid);}
+  .name-btn.selected{
+    border-color:var(--maroon-deep);
+    background:var(--rose-soft);
+    color:var(--maroon-deep);
+  }
+
+  /* ---- Step 3: calendar ---- */
+  .cal-header{
+    display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:14px;
+  }
+  .cal-header .month{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:15px;
+  }
+  .cal-nav{
+    display:flex; gap:6px;
+  }
+  .cal-nav button{
+    width:26px;height:26px;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:var(--cream);
+    color:var(--maroon-deep);
+    cursor:pointer;
+    font-size:13px;
+    line-height:1;
+  }
+  .weekdays{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    margin-bottom:6px;
+  }
+  .weekdays span{
+    text-align:center;
+    font-size:10px;
+    color:var(--ink-soft);
+    font-weight:600;
+    letter-spacing:0.03em;
+  }
+  .days{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    gap:4px;
+    margin-bottom:20px;
+  }
+  .day{
+    aspect-ratio:1/1;
+    display:flex;align-items:center;justify-content:center;
+    font-size:12.5px;
+    border-radius:9px;
+    cursor:pointer;
+    color:var(--ink);
+    background:transparent;
+    border:1px solid transparent;
+  }
+  .day.empty{cursor:default;}
+  .day:not(.empty):hover{background:var(--rose-soft);}
+  .day.selected{
+    background:var(--maroon-deep);
+    color:#fff;
+    font-weight:600;
+  }
+
+  .times{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    margin-bottom:22px;
+  }
+  .time-btn{
+    padding:11px 8px;
+    border-radius:11px;
+    border:1.5px solid var(--line);
+    background:var(--cream);
+    font-family:'Work Sans', sans-serif;
+    font-weight:600;
+    font-size:13px;
+    color:var(--ink);
+    cursor:pointer;
+  }
+  .time-btn.selected{
+    border-color:var(--maroon-deep);
+    background:var(--maroon-deep);
+    color:#fff;
+  }
+
+  .label-row{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:11px;
+    font-weight:600;
+    color:var(--ink-soft);
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    margin:0 0 10px 0;
+  }
+
+  /* ---- Step 4: payment ---- */
+  .urgency{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    background:var(--rose-soft);
+    color:var(--maroon-deep);
+    font-size:11.5px;
+    font-weight:600;
+    padding:8px 10px;
+    border-radius:10px;
+    margin-bottom:18px;
+  }
+
+  .summary-card{
+    background:var(--cream);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:16px 16px;
+    margin-bottom:20px;
+  }
+  .summary-row{
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .summary-row + .summary-row{margin-top:8px;}
+  .summary-row .l{font-size:12.5px; color:var(--ink-soft);}
+  .summary-row .r{font-size:13px; font-weight:600;}
+  .summary-total{
+    display:flex; justify-content:space-between; align-items:baseline;
+    margin-top:12px; padding-top:12px; border-top:1px dashed var(--line);
+  }
+  .summary-total .r{font-family:'Fraunces', serif; font-size:20px; color:var(--maroon-deep); font-weight:600;}
+
+  .field{margin-bottom:14px;}
+  .field label{
+    display:block;
+    font-size:11px;
+    font-weight:600;
+    color:var(--ink-soft);
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    margin-bottom:6px;
+  }
+  .field input{
+    width:100%;
+    padding:12px 13px;
+    border-radius:11px;
+    border:1.5px solid var(--line);
+    background:var(--cream);
+    font-family:'Work Sans', sans-serif;
+    font-size:13.5px;
+    color:var(--ink);
+    outline:none;
+  }
+  .field input:focus{border-color:var(--maroon-mid);}
+  .field-row{display:flex; gap:10px;}
+  .field-row .field{flex:1;}
+  .fine-print{
+    text-align:center;
+    font-size:10.5px;
+    color:var(--ink-soft);
+    margin-top:12px;
+    line-height:1.5;
+  }
+
+  /* ---- Step 5: confirmation ---- */
+  .confetti-icon{
+    width:60px;height:60px;
+    border-radius:50%;
+    background:linear-gradient(180deg,var(--maroon-mid),var(--maroon-deep));
+    display:flex;align-items:center;justify-content:center;
+    margin:6px auto 18px auto;
+    box-shadow:0 12px 24px -8px rgba(107,24,50,0.5);
+  }
+  .confetti-icon svg{width:26px;height:26px;color:#fff;}
+  .receipt{
+    background:var(--cream);
+    border:1px dashed var(--line);
+    border-radius:14px;
+    padding:16px;
+    margin:20px 0;
+    font-size:13px;
+  }
+  .receipt div + div{margin-top:8px;}
+  .receipt b{color:var(--maroon-deep);}
+
+  footer.tag{
+    text-align:center;
+    font-size:11px;
+    color:var(--ink-soft);
+    margin-top:16px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .step, .live-dot{animation:none !important;}
+    .btn-primary{transition:none;}
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+
+  <div class="brandbar">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.6-10-9.1C.6 8.6 2.3 5 6 5c2.1 0 3.6 1.2 4.4 2.5C11.2 6.2 12.7 5 14.8 5 18.5 5 20.2 8.6 18.8 12 16.3 16.4 12 21 12 21z"/></svg>
+      Calendario de Reservas
+    </div>
+    <div class="live-ticker"><span class="live-dot"></span><span id="viewerCount">—</span></div>
+  </div>
+
+  <div class="phone">
+    <svg class="crack-overlay" viewBox="0 0 400 500" preserveAspectRatio="none">
+      <g stroke="#000" stroke-width="0.6" fill="none">
+        <path d="M20 10 L60 90 L40 150 L70 220 L50 300 L80 380 L55 470"/>
+        <path d="M60 90 L120 60 M60 90 L110 130 M40 150 L100 170 M70 220 L130 200 M50 300 L120 320 M80 380 L140 400"/>
+        <path d="M20 10 L-10 60 M20 10 L 5 70"/>
+        <path d="M55 470 L 90 450 M55 470 L 30 440"/>
+      </g>
+    </svg>
+
+    <div class="progress">
+      <span id="p1"><i></i></span>
+      <span id="p2"><i></i></span>
+      <span id="p3"><i></i></span>
+      <span id="p4"><i></i></span>
+    </div>
+
+    <div class="panel">
+
+      <!-- STEP 1: WELCOME -->
+      <section class="step active" data-step="1">
+        <div class="heart-badge">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.6-10-9.1C.6 8.6 2.3 5 6 5c2.1 0 3.6 1.2 4.4 2.5C11.2 6.2 12.7 5 14.8 5 18.5 5 20.2 8.6 18.8 12 16.3 16.4 12 21 12 21z"/></svg>
+        </div>
+        <h1 class="headline">¡Felicidades! Pasaste a la segunda ronda</h1>
+        <p class="sub">Has sido seleccionada personalmente para reservar una cita con <b>Luis</b>. Los cupos son extremadamente limitados — actúa rápido, las demás ya lo están haciendo.</p>
+        <div class="queue-row">
+          <div class="queue-avatars">
+            <span>R</span><span>D</span><span>C</span><span>+9</span>
+          </div>
+          <span class="queue-note">ya están en la fila</span>
+        </div>
+        <button class="btn-primary" onclick="goTo(2)">Confirmar</button>
+      </section>
+
+      <!-- STEP 2: WHO'S BOOKING -->
+      <section class="step" data-step="2">
+        <h2 class="title">¿Quién está reservando?</h2>
+        <p class="subtitle">Selecciona tu nombre para continuar</p>
+        <div class="name-grid" id="nameGrid">
+          <button class="name-btn" data-name="Rebeca">Valentina</button>
+          <button class="name-btn" data-name="Daniela">Daniela</button>
+          <button class="name-btn" data-name="Camila">Camila</button>
+          <button class="name-btn" data-name="Valentina">Rebeca</button>
+          <button class="name-btn" data-name="Sofía">Sofía</button>
+          <button class="name-btn" data-name="Andrea">Andrea</button>
+        </div>
+        <button class="btn-primary" id="nameNext" disabled onclick="goTo(3)">Continuar</button>
+      </section>
+
+      <!-- STEP 3: CALENDAR -->
+      <section class="step" data-step="3">
+        <h2 class="title">Reserva una cita con Luis</h2>
+        <p class="subtitle" id="slotsLeftText">Apúrate — solo quedan 4 cupos este mes</p>
+
+        <div class="cal-header">
+          <div class="month" id="calMonthLabel">julio 2026</div>
+          <div class="cal-nav">
+            <button onclick="shiftMonth(-1)">‹</button>
+            <button onclick="shiftMonth(1)">›</button>
+          </div>
+        </div>
+        <div class="weekdays">
+          <span>DOM</span><span>LUN</span><span>MAR</span><span>MIÉ</span><span>JUE</span><span>VIE</span><span>SÁB</span>
+        </div>
+        <div class="days" id="calDays"></div>
+
+        <div class="label-row">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+          Selecciona una hora
+        </div>
+        <div class="times" id="timeGrid">
+          <button class="time-btn" data-time="12:00 PM">12:00 PM</button>
+          <button class="time-btn" data-time="2:00 PM">2:00 PM</button>
+          <button class="time-btn" data-time="4:00 PM">4:00 PM</button>
+          <button class="time-btn" data-time="6:00 PM">6:00 PM</button>
+          <button class="time-btn" data-time="7:00 PM">7:00 PM</button>
+          <button class="time-btn" data-time="8:00 PM">8:00 PM</button>
+        </div>
+
+        <button class="btn-primary" id="dateNext" disabled onclick="goTo(4)">Reservar esta fecha</button>
+      </section>
+
+      <!-- STEP 4: PAYMENT -->
+      <section class="step" data-step="4">
+        <h2 class="title">¡Ya casi!</h2>
+        <div class="urgency">⏳ Tu reserva expira en <span id="countdown">04:59</span></div>
+
+        <div class="summary-card">
+          <div class="summary-row"><span class="l">Reservado para</span><span class="r" id="sumName">—</span></div>
+          <div class="summary-row"><span class="l">Fecha y hora</span><span class="r" id="sumDate">—</span></div>
+          <div class="summary-total"><span class="l">Reserva tu cupo con Luis</span><span class="r">$75.00</span></div>
+        </div>
+
+        <div class="field">
+          <label>Nombre del titular</label>
+          <input type="text" id="cardName" placeholder="ej. Camila Pérez" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Número de tarjeta</label>
+          <input type="text" id="cardNumber" placeholder="0000 0000 0000 0000" maxlength="19" autocomplete="off">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Vencimiento</label>
+            <input type="text" id="cardExp" placeholder="MM / AA" maxlength="7" autocomplete="off">
+          </div>
+          <div class="field">
+            <label>CVV</label>
+            <input type="text" id="cardCvv" placeholder="123" maxlength="4" autocomplete="off">
+          </div>
+        </div>
+
+        <button class="btn-primary" onclick="goTo(5)">🔒 Pagar $75.00 y confirmar</button>
+        <p class="fine-print">Esta es una página de parodia. Ningún pago es real, nada se envía a ningún lado, y Luis no está realmente disponible.</p>
+      </section>
+
+      <!-- STEP 5: CONFIRMATION -->
+      <section class="step" data-step="5">
+        <div class="confetti-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+        </div>
+        <h1 class="headline">¡Ya tienes tu cita!</h1>
+        <p class="sub">Imprime tu confirmación, no le cuentes a nadie, y trata de no pensar demasiado en cómo funciona esto.</p>
+        <div class="receipt">
+          <div>Invitada: <b id="rName">—</b></div>
+          <div>Fecha: <b id="rDate">—</b></div>
+          <div>Reserva con: <b>Luis</b></div>
+          <div>Monto cobrado: <b>$75.00</b></div>
+        </div>
+        <button class="btn-primary" onclick="resetAll()">Reservar otra cita</button>
+        <footer class="tag">el amor está muerto 💔</footer>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  // ---------- state ----------
+  let state = { name:null, date:null, time:null, monthOffset:0 };
+  const steps = [1,2,3,4,5];
+
+  function goTo(n){
+    document.querySelectorAll('.step').forEach(s=>{
+      s.classList.toggle('active', Number(s.dataset.step) === n);
+    });
+    steps.forEach(i=>{
+      const el = document.getElementById('p'+i);
+      if(!el) return;
+      el.classList.remove('done','active');
+      if(i < n) el.classList.add('done');
+      if(i === n) el.classList.add('active');
+    });
+    if(n === 4){
+      document.getElementById('sumName').textContent = state.name || '—';
+      document.getElementById('sumDate').textContent = (state.date && state.time) ? (state.date + ' · ' + state.time) : '—';
+      startCountdown();
+    }
+    if(n === 5){
+      document.getElementById('rName').textContent = state.name || '—';
+      document.getElementById('rDate').textContent = (state.date && state.time) ? (state.date + ' a las ' + state.time) : '—';
+    }
+  }
+
+  // progress bars init: step 1 active
+  goTo(1);
+
+  // ---------- name select ----------
+  document.getElementById('nameGrid').addEventListener('click', (e)=>{
+    const btn = e.target.closest('.name-btn');
+    if(!btn) return;
+    document.querySelectorAll('.name-btn').forEach(b=>b.classList.remove('selected'));
+    btn.classList.add('selected');
+    state.name = btn.dataset.name;
+    document.getElementById('nameNext').disabled = false;
+  });
+
+  // ---------- calendar ----------
+  const monthLabelEl = document.getElementById('calMonthLabel');
+  const daysEl = document.getElementById('calDays');
+  const baseMonth = new Date(2026, 6, 1); // July 2026
+
+  function renderCalendar(){
+    const d = new Date(baseMonth.getFullYear(), baseMonth.getMonth() + state.monthOffset, 1);
+    const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+    monthLabelEl.textContent = monthNames[d.getMonth()] + ' ' + d.getFullYear();
+
+    const firstDow = d.getDay();
+    const daysInMonth = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
+
+    daysEl.innerHTML = '';
+    for(let i=0;i<firstDow;i++){
+      const e = document.createElement('div');
+      e.className = 'day empty';
+      daysEl.appendChild(e);
+    }
+    for(let day=1; day<=daysInMonth; day++){
+      const e = document.createElement('div');
+      e.className = 'day';
+      e.textContent = day;
+      const label = day + ' de ' + monthNames[d.getMonth()] + ' de ' + d.getFullYear();
+      e.addEventListener('click', ()=>{
+        document.querySelectorAll('.day').forEach(x=>x.classList.remove('selected'));
+        e.classList.add('selected');
+        state.date = label;
+        checkDateNext();
+      });
+      if(state.date === label) e.classList.add('selected');
+      daysEl.appendChild(e);
+    }
+  }
+
+  function shiftMonth(delta){
+    state.monthOffset += delta;
+    renderCalendar();
+  }
+  renderCalendar();
+
+  document.getElementById('timeGrid').addEventListener('click', (e)=>{
+    const btn = e.target.closest('.time-btn');
+    if(!btn) return;
+    document.querySelectorAll('.time-btn').forEach(b=>b.classList.remove('selected'));
+    btn.classList.add('selected');
+    state.time = btn.dataset.time;
+    checkDateNext();
+  });
+
+  function checkDateNext(){
+    document.getElementById('dateNext').disabled = !(state.date && state.time);
+  }
+
+  // fake "spots left" ticker that only ever goes down, for comedy
+  let spotsLeft = 4;
+  setInterval(()=>{
+    if(Math.random() < 0.15 && spotsLeft > 1){
+      spotsLeft -= 1;
+      document.getElementById('slotsLeftText').textContent = 'Apúrate — solo queda' + (spotsLeft===1?'':'n') + ' ' + spotsLeft + ' cupo' + (spotsLeft===1?'':'s') + ' este mes';
+    }
+  }, 4000);
+
+  // fake live viewer counter
+  const viewerEl = document.getElementById('viewerCount');
+  let viewers = 128;
+  function tickViewers(){
+    viewers += Math.floor(Math.random()*5) - 2;
+    if(viewers < 40) viewers = 40;
+    viewerEl.textContent = viewers + ' viendo ahora';
+  }
+  tickViewers();
+  setInterval(tickViewers, 2500);
+
+  // ---------- payment fields (cosmetic only — nothing is sent or stored) ----------
+  const cardNumber = document.getElementById('cardNumber');
+  cardNumber.addEventListener('input', ()=>{
+    let v = cardNumber.value.replace(/\D/g,'').slice(0,16);
+    cardNumber.value = v.replace(/(.{4})/g,'$1 ').trim();
+  });
+  const cardExp = document.getElementById('cardExp');
+  cardExp.addEventListener('input', ()=>{
+    let v = cardExp.value.replace(/\D/g,'').slice(0,4);
+    if(v.length >= 3) v = v.slice(0,2) + ' / ' + v.slice(2);
+    cardExp.value = v;
+  });
+  const cardCvv = document.getElementById('cardCvv');
+  cardCvv.addEventListener('input', ()=>{
+    cardCvv.value = cardCvv.value.replace(/\D/g,'').slice(0,4);
+  });
+
+  // ---------- fake countdown on payment screen ----------
+  let countdownTimer = null;
+  function startCountdown(){
+    if(countdownTimer) clearInterval(countdownTimer);
+    let total = 299; // 4:59
+    const el = document.getElementById('countdown');
+    function render(){
+      const m = Math.floor(total/60), s = total%60;
+      el.textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+    }
+    render();
+    countdownTimer = setInterval(()=>{
+      total -= 1;
+      if(total <= 0){ total = 299; } // loop forever, never actually expires — the joke
+      render();
+    }, 1000);
+  }
+
+  // ---------- reset ----------
+  function resetAll(){
+    state = { name:null, date:null, time:null, monthOffset:0 };
+    document.querySelectorAll('.name-btn').forEach(b=>b.classList.remove('selected'));
+    document.getElementById('nameNext').disabled = true;
+    document.getElementById('dateNext').disabled = true;
+    document.querySelectorAll('.time-btn').forEach(b=>b.classList.remove('selected'));
+    renderCalendar();
+    goTo(1);
+  }
+</script>
+
+</body>
+</html>
